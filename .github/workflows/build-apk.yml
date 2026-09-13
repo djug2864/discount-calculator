@@ -1,0 +1,48 @@
+name: Build and Release APK
+
+# 手動で「Run workflow」ボタンを押したときだけ実行
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'バージョンの名前（例: v1.0.0）'
+        required: true
+        default: 'v1.0.0'
+
+# Release作成に必要な書き込み権限を指定
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. コードの取得
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Javaのセットアップ
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # 3. gradlewファイルに実行権限を付与
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # 4. APKの作成（ビルド）
+      - name: Build APK
+        run: ./gradlew assembleDebug
+
+      # 5. Releaseを作成してAPKを自動追加
+      - name: Create Release and Upload APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag_name }}
+          name: Release ${{ inputs.tag_name }}
+          files: app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

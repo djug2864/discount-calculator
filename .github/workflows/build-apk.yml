@@ -1,6 +1,5 @@
 name: Build and Release APK
 
-# 手動で「Run workflow」ボタンを押したときだけ実行
 on:
   workflow_dispatch:
     inputs:
@@ -9,7 +8,6 @@ on:
         required: true
         default: 'v1.0.0'
 
-# Release作成に必要な書き込み権限を指定
 permissions:
   contents: write
 
@@ -18,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. GitHubからコードを取得
+      # 1. コードの取得
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -29,19 +27,16 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3. 不足している gradle-wrapper.jar を自動生成（ここを追加！）
-      - name: Setup Gradle Wrapper
-        run: gradle wrapper
+      # 3. Gradle環境の自動セットアップ（リンク先の記事の重要ポイント！）
+      # これを入れると gradlew や jar が無くても自動で補完・準備してくれます
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
 
-      # 4. gradlewファイルに実行権限を付与
-      - name: Make gradlew executable
-        run: chmod +x gradlew
+      # 4. Gradleを使って直接ビルド（gradlewスクリプトを経由せず実行）
+      - name: Build APK with Gradle
+        run: gradle assembleDebug
 
-      # 5. APKの作成（ビルド実行）
-      - name: Build APK
-        run: ./gradlew assembleDebug
-
-      # 6. Releaseを作成してAPKを自動追加
+      # 5. Releaseを作成してAPKを自動添付
       - name: Create Release and Upload APK
         uses: softprops/action-gh-release@v2
         with:

@@ -22,22 +22,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Javaのセットアップ（安定したTemurin 17を使用）
+      # 2. Javaのセットアップ
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3. gradlewファイルに実行権限を付与（エラー防止のための必須処理）
+      # 3. 不足している gradle-wrapper.jar を自動生成（ここを追加！）
+      - name: Setup Gradle Wrapper
+        run: gradle wrapper
+
+      # 4. gradlewファイルに実行権限を付与
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      # 4. APKの作成（ビルド実行）
+      # 5. APKの作成（ビルド実行）
       - name: Build APK
         run: ./gradlew assembleDebug
 
-      # 5. Releaseを作成してAPKを自動追加
+      # 6. Releaseを作成してAPKを自動追加
       - name: Create Release and Upload APK
         uses: softprops/action-gh-release@v2
         with:
@@ -45,4 +49,4 @@ jobs:
           name: Release ${{ inputs.tag_name }}
           files: app/build/outputs/apk/debug/app-debug.apk
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

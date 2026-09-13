@@ -27,16 +27,19 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3. Gradle環境の自動セットアップ（リンク先の記事の重要ポイント！）
-      # これを入れると gradlew や jar が無くても自動で補完・準備してくれます
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+      # 3. gradlew と wrapper を自動生成（ここがポイント）
+      - name: Generate Gradle Wrapper
+        run: gradle wrapper
 
-      # 4. Gradleを使って直接ビルド（gradlewスクリプトを経由せず実行）
-      - name: Build APK with Gradle
-        run: gradle assembleDebug
+      # 4. gradlew に実行権限を付与
+      - name: Make gradlew executable
+        run: chmod +x gradlew
 
-      # 5. Releaseを作成してAPKを自動添付
+      # 5. gradlew を使ってビルド
+      - name: Build APK with Gradle Wrapper
+        run: ./gradlew assembleDebug
+
+      # 6. Releaseを作成してAPKを自動追加
       - name: Create Release and Upload APK
         uses: softprops/action-gh-release@v2
         with:

@@ -1,50 +1,61 @@
-name: Build and Release APK
+name: Convert AAB to APK
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag_name:
-        description: 'バージョンの名前（例: v1.0.0）'
-        required: true
-        default: 'v1.0.0'
-
-permissions:
-  contents: write
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: # 手動実行用ボタンを有効化
 
 jobs:
-  build:
+  convert:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. コードの取得
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Javaのセットアップ
+      # 1. Java環境のセットアップ (bundletoolの実行に必要)
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
           java-version: '17'
+          distribution: 'temurin'
 
-      # 3. gradlew と wrapper を自動生成（ここがポイント）
-      - name: Generate Gradle Wrapper
-        run: gradle wrapper
+      # 2. bundletoolのダウンロード (URL修正済み)
+      - name: Download bundletool
+        run: |
+          VERSION="1.17.2"
+          curl -L -o bundletool.jar https://github.com/google/bundletool/releases/download/${VERSION}/bundletool-all-${VERSION}.jar
 
-      # 4. gradlew に実行権限を付与
-      - name: Make gradlew executable
-        run: chmod +x gradlew
-
-      # 5. gradlew を使ってビルド
-      - name: Build APK with Gradle Wrapper
-        run: ./gradlew assembleDebug
-
-      # 6. Releaseを作成してAPKを自動追加
-      - name: Create Release and Upload APK
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ inputs.tag_name }}
-          name: Release ${{ inputs.tag_name }}
-          files: app/build/outputs/apk/debug/app-debug.apk
+      # 3. AABからAPKSファイル（APKのセット）を生成
+      - name: Build APKS from AAB
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          # 1. Base64形式で保存したキーストアファイルをデコードして復元
+          echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+          
+          # 2. bundletoolを実行して.apksファイルを生成
+          java -jar bundletool.jar build-apks \
+            --bundle=app/build/outputs/bundle/release/app-release.aab \
+            --output=app-release.apks \
+            --mode=universal \
+            --ks=release.keystore \
+            --ks-pass=pass:"$KEYSTORE_PASSWORD" \
+            --ks-key-alias="$KEY_ALIAS" \
+            --key-pass=pass:"$KEY_PASSWORD"
+
+      # 4. APKSから汎用APK（Universal APK）を抽出する
+      - name: Extract Universal APK
+        run: |
+          unzip app-release.apks -d apk_out
+          mv apk_out/universal.apk app-release.apk
+
+      # 5. 生成したAPKをGitHubのArtifactsに保存
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: universal-apk
+          path: app-release.apk

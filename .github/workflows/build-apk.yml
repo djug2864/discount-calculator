@@ -1,64 +1,33 @@
-name: Convert AAB to APK
+name: Build Debug APK
 
 on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch: # 手動実行用ボタンを有効化
+  workflow_dispatch:
 
 jobs:
-  convert:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # 1. Java環境のセットアップ (bundletoolの実行に必要)
-      - name: Set up JDK 17
+      - name: Setup JDK
         uses: actions/setup-java@v4
         with:
+          distribution: temurin
           java-version: '17'
-          distribution: 'temurin'
 
-      # 2. bundletoolのダウンロード
-      - name: Download bundletool
-        run: |
-          # 最新のbundletoolのバージョンを指定してダウンロード
-          VERSION="1.17.2"
-          curl -L -o bundletool.jar https://github.com{VERSION}/bundletool-all-${VERSION}.jar
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      # 3. AABからAPKSファイル（APKのセット）を生成
-      # ※ 事前にリポジトリの「Settings > Secrets and variables > Actions」にキーストア情報を登録してください
-      - name: Build APKS from AAB
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          # 1. Base64形式で保存したキーストアファイルをデコードして復元
-          echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
-          
-          # 2. bundletoolを実行して.apksファイルを生成 (--universalを指定すると全端末対応の1つのAPKが内包されます)
-          java -jar bundletool.jar build-apks \
-            --bundle=app/build/outputs/bundle/release/app-release.aab \
-            --output=app-release.apks \
-            --mode=universal \
-            --ks=release.keystore \
-            --ks-pass=pass:"$KEYSTORE_PASSWORD" \
-            --ks-key-alias="$KEY_ALIAS" \
-            --key-pass=pass:"$KEY_PASSWORD"
+      - name: Grant execute permission
+        run: chmod +x ./gradlew
 
-      # 4. APKSから汎用APK（Universal APK）を抽出する
-      - name: Extract Universal APK
-        run: |
-          # apksはただのzipファイルなので、解凍してuniversal.apkを取り出す
-          unzip app-release.apks -d apk_out
-          mv apk_out/universal.apk app-release.apk
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
 
-      # 5. 生成したAPKをGitHubのArtifactsに保存（ダウンロード可能にする）
-      - name: Upload APK Artifact
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: universal-apk
-          path: app-release.apk
+          name: debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk

@@ -8,26 +8,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ソースコードを取得
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Java 17をセットアップ
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
+      # Gradle 8.2.1をセットアップ
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.2.1'
+
+      # Android SDKをセットアップ
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      # Gradle Wrapperを生成
+      - name: Generate Gradle Wrapper
+        run: gradle wrapper --gradle-version 8.2.1 --distribution-type bin
+
+      # gradlewに実行権限を付与
       - name: Grant execute permission
         run: chmod +x ./gradlew
 
+      # Debug APKをビルド
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
+      # 完成したAPKをArtifactとして保存
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: debug-apk
+          name: discount-calculator-debug
           path: app/build/outputs/apk/debug/app-debug.apk

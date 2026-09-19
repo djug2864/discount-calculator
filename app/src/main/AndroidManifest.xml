@@ -1,20 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!--
-        android:allowBackup="true" enables automatic data backup to Google Drive.
-        If your app handles sensitive data, consider restricting the backup scope
-        via android:fullBackupContent or disabling it with android:allowBackup="false".
-        See: https://developer.android.com/guide/topics/data/autobackup
-    -->
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:icon="@drawable/ic_launcher"
+        android:label="5割引計算機"
+        android:roundIcon="@drawable/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MyApp">
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
 
+        <!-- メイン画面 -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -23,6 +18,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- アプリ情報画面（追加） -->
+        <activity
+            android:name=".AppInfoActivity"
+            android:exported="false" />
 
     </application>
 
